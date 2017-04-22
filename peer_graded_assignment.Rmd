@@ -1,0 +1,67 @@
+---
+title: 'Peer-graded Assignment: R Markdown and Leaflet'
+author: "Charl Marais"
+date: "20 April 2017"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Peer-graded Assignment: R Markdown and Leaflet (and Shiny)
+
+This R Markdown document is made interactive using Shiny. The user can select, from a list of countries and a leaflet map will zoom to the particular country and add a pointer on the 10 largest cities. The pointer will have some key statistics of the capital.
+
+# Load the required libraries
+```{r}
+library(shiny)
+library(maps)
+library(leaflet)
+```
+
+# Build the ui function
+
+```{r}
+ui <- fluidPage(
+  selectInput("country", "Please select country : ",
+              sort(unique(data.frame(world.cities)$country.etc))),
+  leafletOutput("mymap")
+)
+```
+
+# Build the server function
+
+```{r}
+server <- function(input, output) {
+  data <- data.frame(world.cities)
+  colnames(data)[which(colnames(data) %in% "long")] <- "lng"
+  
+  dat_fin <- reactive({
+    tmp <- data[data$country.etc == input$country, ]
+    tmp <- tmp[order(tmp$pop, decreasing = T)[1:10], c("lat", "lng")]
+    
+    return(tmp)
+  })
+  
+  details <- reactive({paste(dat_fin()$name, "population = ", dat_fin()$pop)})
+  
+  output$mymap <- renderLeaflet({
+    dat_fin() %>%
+      leaflet() %>%
+      addTiles() %>%
+      addMarkers(popup = details())
+  })
+  
+}
+```
+
+# Call the Shiny App
+
+```{r}
+shinyApp(ui, server)
+```
+
+
+
